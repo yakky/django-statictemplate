@@ -1,7 +1,7 @@
 3.0 (unreleased)
 ================
 
-* Django 1.8, 1.9, 1.10, 1.11 support
+* Django 1.8, 1.9, 1.10, 1.11, 2.0, 2.1 support
 * Drop support for Django < 1.8
 * Add language option to the command line
 

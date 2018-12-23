@@ -3,13 +3,12 @@ import codecs
 from contextlib import contextmanager
 
 from django.conf import settings
-from django.conf.urls import include, url
 from django.core.management.base import BaseCommand
 from django.shortcuts import render
 from django.test.client import Client
 from django.utils.encoding import force_text
 from django.utils.six.moves.urllib_parse import parse_qs
-from django.utils.translation import get_language
+from django.utils.translation import get_language, override
 
 try:
     from django.urls import clear_url_caches
@@ -64,12 +63,13 @@ def make_static(template, language=None, request=None):
                 request = {}
             if language:
                 client.cookies['django_language'] = language
-            request.update({'template': template})
-            response = client.get('/', request)
-            if response.status_code != 200:
-                raise InvalidResponseError(  # NOQA
-                    'Response code was %d, expected 200' % response.status_code
-                )
+            with override(language):
+                request.update({'template': template})
+                response = client.get('/', request)
+                if response.status_code != 200:
+                    raise InvalidResponseError(  # NOQA
+                        'Response code was %d, expected 200' % response.status_code
+                    )
             return force_text(response.content)
 
 
@@ -110,7 +110,17 @@ def render_view(request):
     return render(request, template_name)
 
 
-urlpatterns = [
-    url('^$', render_view),
-    url('^', include(settings.ROOT_URLCONF))
-]
+try:
+    from django.urls import include, path
+
+    urlpatterns = [
+        path('', render_view),
+        path('', include(settings.ROOT_URLCONF))
+    ]
+except ImportError:
+    from django.conf.urls import include, url
+
+    urlpatterns = [
+        url('^$', render_view),
+        url('^', include(settings.ROOT_URLCONF))
+    ]

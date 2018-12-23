@@ -4,3 +4,4 @@ coverage_html
 *.py[co]
 build
 dist
+.env*

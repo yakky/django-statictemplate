@@ -20,6 +20,10 @@ try:
 except ImportError:
     class MiddlewareMixin(object):
         pass
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 
 
 class TestLoader(Loader):
@@ -31,6 +35,26 @@ class TestLoader(Loader):
         'base': '{% block head %}head{% endblock %}{% block content %}content{% endblock %}',
     }
 
+    # Django 2.0+
+    def get_contents(self, origin):
+        try:
+            found = self.templates.get(origin.template_name, None)
+            if not found:  # pragma: no cover
+                raise TemplateDoesNotExist(origin.template_name)
+            return found
+        except FileNotFoundError:
+            raise TemplateDoesNotExist(origin)
+
+    # Django 2.0+
+    def get_template_sources(self, template_name):
+        from django.template import Origin
+        yield Origin(
+            name=template_name,
+            template_name=template_name,
+            loader=self,
+        )
+
+    # Django 1.11 and below
     def load_template_source(self, template_name, template_dirs=None):
         found = self.templates.get(template_name, None)
         if not found:  # pragma: no cover
@@ -59,7 +83,7 @@ class StaticTemplateTests(SimpleTestCase):
 
     def test_request_command(self):
         sio = StringIO()
-        call_command('statictemplate', 'request', stdout=sio, language='it',
+        call_command('statictemplate', 'request', stdout=sio, language_code='it',
                      extra_request='extra=extra_request&canonical=1')
         self.assertEqual(sio.getvalue().strip(), 'headrequest extra_request it')
 
@@ -84,6 +108,7 @@ class StaticTemplateTests(SimpleTestCase):
                 'statictemplate.tests.MeddlingMiddleware',
             )
             settings.MIDDLEWARE_CLASSES = middleware
+            settings.MIDDLEWARE = middleware
             statictemplate_settings.OVERRIDE_MIDDLEWARE = False
             with self.assertRaises(InvalidResponseError):
                 make_static('simple')

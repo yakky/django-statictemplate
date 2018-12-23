@@ -11,12 +11,24 @@ env:
   - DJANGO='django<1.10'
   - DJANGO='django<1.11'
   - DJANGO='django<2.0'
+  - DJANGO='django<2.1'
+  - DJANGO='django<2.2'
 install:
   - pip install $DJANGO coverage coveralls flake8 isort
 before_script:
   - make lint
 script: coverage run --rcfile=.coveragerc runtests.py
 after_success: coveralls
+
+
+matrix:
+  exclude:
+  - python: 2.7
+    env: DJANGO='django<2.2'
+  - python: 2.7
+    env: DJANGO='django<2.1'
+  - python: 3.4
+    env: DJANGO='django<2.2'
 notifications:
   email:
     recipients:
